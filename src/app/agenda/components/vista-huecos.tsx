@@ -14,7 +14,7 @@ import {
 import { cambiarEstadoCita } from '@/lib/agenda/actions';
 import { mensajeError } from '@/lib/agenda/mensajes';
 import { formatearEnMadrid } from '@/lib/tiempo/zona-horaria';
-import type { Hueco } from '@/app/agenda/tipos';
+import type { CitaCancelada, Hueco } from '@/app/agenda/tipos';
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   reservada: 'Reservada',
@@ -25,12 +25,13 @@ const ETIQUETA_ESTADO: Record<string, string> = {
 
 interface Props {
   huecos: Hueco[];
+  citasCanceladas: CitaCancelada[];
   onReservar: (hueco: Hueco) => void;
   onReprogramar: (hueco: Hueco) => void;
   onCambio: () => void;
 }
 
-export function VistaHuecos({ huecos, onReservar, onReprogramar, onCambio }: Props) {
+export function VistaHuecos({ huecos, citasCanceladas, onReservar, onReprogramar, onCambio }: Props) {
   const [pendiente, iniciarTransicion] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [citaEnCurso, setCitaEnCurso] = useState<string | null>(null);
@@ -163,6 +164,28 @@ export function VistaHuecos({ huecos, onReservar, onReprogramar, onCambio }: Pro
           </TableBody>
         </Table>
       </div>
+
+      {citasCanceladas.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">Cancelaciones de este día</h3>
+          <ul className="space-y-1">
+            {citasCanceladas.map((c) => (
+              <li
+                key={c.id}
+                className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm text-muted-foreground"
+              >
+                <span className="font-mono">{formatearEnMadrid(new Date(c.inicio), 'HH:mm')}</span>
+                <span>
+                  {c.clienteNombre} — {c.servicioNombre}
+                </span>
+                <Badge variant="outline">
+                  {c.canceladaPor === 'cliente' ? 'Cancelada por el cliente' : 'Cancelada por secretaría'}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

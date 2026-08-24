@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db/prisma';
-import { cambiarEstadoCita } from '@/lib/agenda/actions';
+import { cancelarCitaAtomica } from '@/lib/agenda/reglas';
 
 export type CodigoErrorCancelacion = 'token_invalido' | 'ya_cancelada' | 'plazo_agotado';
 
@@ -33,15 +33,18 @@ export async function confirmarCancelacionRecordatorio(
   }
 
   const ahora = new Date();
-  if (ahora >= recordatorio.cita.inicio) {
+  const veinticuatroHorasAntes = new Date(recordatorio.cita.inicio.getTime() - 24 * 60 * 60 * 1000);
+  if (ahora >= veinticuatroHorasAntes) {
+    // Mismo plazo de autoservicio del cliente que 002-portal-cliente-citas
+    // (FR-006 de esa spec): 24h antes del inicio, no "hasta el inicio".
     return { ok: false, codigo: 'plazo_agotado' };
   }
 
-  const resultado = await cambiarEstadoCita({
-    citaId: recordatorio.citaId,
-    nuevoEstado: 'cancelada',
-  });
-  if (!resultado.ok) {
+  // Cancelación atómica e idempotente compartida con el portal del cliente y
+  // la agenda de secretaría (FR-018 de 001-agenda-citas); registra el origen
+  // "cliente" igual que el portal, para que la agenda lo distinga (FR-007a).
+  const cancelada = await cancelarCitaAtomica(recordatorio.citaId, 'cliente');
+  if (!cancelada) {
     // La cita ya no estaba en `reservada` (p. ej. cancelada/completada por
     // secretaría entre tanto): no hay nada más que cancelar por este medio.
     return { ok: false, codigo: 'token_invalido' };
@@ -86,7 +89,8 @@ export async function obtenerDatosCancelacion(token: string): Promise<DatosCance
     return { estadoEnlace: 'ya_cancelado' };
   }
 
-  if (new Date() >= recordatorio.cita.inicio) {
+  const veinticuatroHorasAntes = new Date(recordatorio.cita.inicio.getTime() - 24 * 60 * 60 * 1000);
+  if (new Date() >= veinticuatroHorasAntes) {
     return { estadoEnlace: 'plazo_agotado' };
   }
 

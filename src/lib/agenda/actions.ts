@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db/prisma';
 import {
+  cancelarCitaAtomica,
   ErrorReglaNegocio,
   traducirErrorEscrituraCita,
   validarCitaReprogramable,
@@ -166,6 +167,20 @@ export async function cambiarEstadoCita(
     }
 
     validarTransicionEstado(cita.estado as EstadoCita, entrada.nuevoEstado);
+
+    if (entrada.nuevoEstado === 'cancelada') {
+      // Cancelación atómica compartida con el portal del cliente (FR-007a,
+      // FR-008, research.md §4-§5): fija además el origen de la cancelación.
+      const cancelada = await cancelarCitaAtomica(entrada.citaId, 'secretaria');
+      if (!cancelada) {
+        throw new ErrorReglaNegocio(
+          'estado_final_inmutable',
+          'La cita ya está en un estado final y no admite más cambios.',
+        );
+      }
+      revalidarAgenda();
+      return { ok: true, datos: { citaId: entrada.citaId, estado: 'cancelada' } };
+    }
 
     const actualizada = await prisma.cita.update({
       where: { id: entrada.citaId },

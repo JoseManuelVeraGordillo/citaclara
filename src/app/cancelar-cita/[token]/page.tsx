@@ -42,8 +42,8 @@ export default async function PaginaCancelarCita({ params }: Props) {
 
       {datos.estadoEnlace === 'plazo_agotado' && (
         <p role="alert" className="text-sm text-destructive">
-          Ya no se puede cancelar esta cita por este medio: la hora de la cita ya ha pasado. Si
-          necesitas ayuda, contacta con el despacho.
+          Ya no se puede cancelar esta cita por este medio: faltan menos de 24 horas para la cita.
+          Si necesitas ayuda, contacta con el despacho.
         </p>
       )}
 

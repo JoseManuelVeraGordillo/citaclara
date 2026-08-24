@@ -1,4 +1,5 @@
 import { estaEnHorarioLaboral } from '@/lib/agenda/horario';
+import { prisma } from '@/lib/db/prisma';
 
 export type CodigoErrorRegla =
   | 'solape'
@@ -131,6 +132,29 @@ export function validarTransicionEstado(
   if (!['completada', 'cancelada', 'no_asistida'].includes(nuevoEstado)) {
     throw new ErrorReglaNegocio('transicion_no_permitida', 'Transición de estado no permitida.');
   }
+}
+
+export type OrigenCancelacion = 'secretaria' | 'cliente';
+
+/**
+ * Cancelación atómica (FR-005–FR-008, FR-007a, research.md §4-§5): una única
+ * sentencia SQL condicional (`UPDATE ... WHERE estado = 'reservada'`) que
+ * PostgreSQL garantiza atómica por fila, sin bloqueos aplicativos. Ante dos
+ * cancelaciones casi simultáneas de la misma cita (desde el portal, desde la
+ * agenda, o ambas a la vez), como máximo una tiene éxito. Fija a la vez
+ * `canceladaPor` con el origen de quien cancela, para que la agenda de
+ * secretaría pueda distinguirlo (FR-007a).
+ */
+export async function cancelarCitaAtomica(
+  citaId: string,
+  origen: OrigenCancelacion,
+): Promise<boolean> {
+  const filasAfectadas = await prisma.$executeRaw`
+    UPDATE "citas"
+    SET "estado" = 'cancelada', "canceladaPor" = ${origen}::"OrigenCancelacion", "actualizadaEn" = now()
+    WHERE "id" = ${citaId} AND "estado" = 'reservada'
+  `;
+  return filasAfectadas > 0;
 }
 
 /** Reprogramación (FR-011, FR-012): solo válida sobre una cita en `reservada`. */
