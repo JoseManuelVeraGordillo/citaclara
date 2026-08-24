@@ -3,7 +3,11 @@
 // middleware que en Server Actions/Route Handlers.
 
 export const COOKIE_SESION = 'citaclara_sesion';
-const VALOR_SESION = 'secretaria';
+/** Cookie de sesión del panel de analítica (004-panel-analitica-despacho), independiente de la de secretaría (FR-001). */
+export const COOKIE_SESION_PANEL = 'citaclara_sesion_panel';
+
+const VALOR_SESION_SECRETARIA = 'secretaria';
+const VALOR_SESION_PANEL = 'panel';
 
 function secreto(): string {
   const valor = process.env.SESSION_SECRET;
@@ -31,17 +35,18 @@ async function firmar(valor: string): Promise<string> {
   return aHex(firma);
 }
 
-/** Valor a guardar en la cookie de sesión de secretaría: `payload.firma` (FR-001). */
-export async function crearValorCookieSesion(): Promise<string> {
-  const firma = await firmar(VALOR_SESION);
-  return `${VALOR_SESION}.${firma}`;
+async function crearValorCookieConPayload(payload: string): Promise<string> {
+  const firma = await firmar(payload);
+  return `${payload}.${firma}`;
 }
 
-/** Comprueba que el valor de la cookie de sesión es válido y no ha sido manipulado. */
-export async function esSesionValida(valorCookie: string | undefined | null): Promise<boolean> {
+async function esValorCookieValido(
+  valorCookie: string | undefined | null,
+  payloadEsperado: string,
+): Promise<boolean> {
   if (!valorCookie) return false;
   const [payload, firma] = valorCookie.split('.');
-  if (!payload || !firma || payload !== VALOR_SESION) return false;
+  if (!payload || !firma || payload !== payloadEsperado) return false;
 
   const firmaEsperada = await firmar(payload);
   if (firma.length !== firmaEsperada.length) return false;
@@ -52,4 +57,26 @@ export async function esSesionValida(valorCookie: string | undefined | null): Pr
     diferencia |= firma.charCodeAt(i) ^ firmaEsperada.charCodeAt(i);
   }
   return diferencia === 0;
+}
+
+/** Valor a guardar en la cookie de sesión de secretaría: `payload.firma` (FR-001). */
+export async function crearValorCookieSesion(): Promise<string> {
+  return crearValorCookieConPayload(VALOR_SESION_SECRETARIA);
+}
+
+/** Comprueba que el valor de la cookie de sesión de secretaría es válido y no ha sido manipulado. */
+export async function esSesionValida(valorCookie: string | undefined | null): Promise<boolean> {
+  return esValorCookieValido(valorCookie, VALOR_SESION_SECRETARIA);
+}
+
+/** Valor a guardar en la cookie de sesión de panel: `payload.firma` (004-panel-analitica-despacho, FR-001). */
+export async function crearValorCookieSesionPanel(): Promise<string> {
+  return crearValorCookieConPayload(VALOR_SESION_PANEL);
+}
+
+/** Comprueba que el valor de la cookie de sesión de panel es válido y no ha sido manipulado. */
+export async function esSesionPanelValida(
+  valorCookie: string | undefined | null,
+): Promise<boolean> {
+  return esValorCookieValido(valorCookie, VALOR_SESION_PANEL);
 }
