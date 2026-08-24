@@ -37,9 +37,18 @@ export async function GET(request: NextRequest) {
       inicio: { lte: finDia },
       fin: { gte: inicioDia },
     },
-    include: { cliente: true, servicio: true },
+    include: {
+      cliente: true,
+      servicio: true,
+      recordatorios: { where: { estado: 'omitido_sin_email' }, select: { citaInicio: true } },
+    },
     orderBy: { inicio: 'asc' },
   });
+
+  // Historial de cancelaciones del día (FR-007a): las citas canceladas
+  // liberan el hueco (no aparecen en `huecos` como ocupadas), pero secretaría
+  // debe poder ver, en el historial, si el origen fue el propio cliente.
+  const citasCanceladas = citas.filter((c) => c.estado === 'cancelada');
 
   const huecos = calcularHuecos(
     fecha,
@@ -50,6 +59,11 @@ export async function GET(request: NextRequest) {
       clienteNombre: `${c.cliente.nombre} ${c.cliente.apellidos}`,
       servicioNombre: c.servicio.nombre,
       estado: c.estado,
+      // 002-recordatorios-cita (FR-012): visible para secretaría cuando el
+      // cliente no tiene email y el proceso diario omitió el recordatorio.
+      sinRecordatorioEnviado: c.recordatorios.some(
+        (r) => r.citaInicio.getTime() === c.inicio.getTime(),
+      ),
     })),
   );
 
@@ -61,6 +75,13 @@ export async function GET(request: NextRequest) {
       fin: h.fin.toISOString(),
       estado: h.estado,
       ...(h.cita ? { cita: h.cita } : {}),
+    })),
+    citasCanceladas: citasCanceladas.map((c) => ({
+      id: c.id,
+      inicio: c.inicio.toISOString(),
+      clienteNombre: `${c.cliente.nombre} ${c.cliente.apellidos}`,
+      servicioNombre: c.servicio.nombre,
+      canceladaPor: c.canceladaPor,
     })),
   });
 }

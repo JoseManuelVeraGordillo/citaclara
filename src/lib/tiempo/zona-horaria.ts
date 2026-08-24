@@ -1,5 +1,6 @@
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 /**
  * Toda fecha/hora se almacena en UTC (Principio II); esta es la única zona
@@ -21,9 +22,12 @@ export function deZonaMadridAUtc(fechaLocal: Date): Date {
   return fromZonedTime(fechaLocal, ZONA_HORARIA);
 }
 
-/** Formatea un instante UTC como fecha/hora legible en Europe/Madrid. */
+/**
+ * Formatea un instante UTC como fecha/hora legible en Europe/Madrid, con
+ * nombres de mes/día en español de España (Principio VIII).
+ */
 export function formatearEnMadrid(fechaUtc: Date, patron: string): string {
-  return format(toZonedTime(fechaUtc, ZONA_HORARIA), patron);
+  return format(toZonedTime(fechaUtc, ZONA_HORARIA), patron, { locale: es });
 }
 
 /** Fecha (YYYY-MM-DD) en Europe/Madrid correspondiente a un instante UTC. */

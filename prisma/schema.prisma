@@ -24,11 +24,11 @@ model Despacho {
 }
 
 model Profesional {
-  id            String  @id @default(uuid())
-  despachoId    String
-  nombre        String
-  especialidad  String
-  activo        Boolean @default(true)
+  id           String  @id @default(uuid())
+  despachoId   String
+  nombre       String
+  especialidad String
+  activo       Boolean @default(true)
 
   despacho Despacho @relation(fields: [despachoId], references: [id])
   citas    Cita[]
@@ -38,12 +38,12 @@ model Profesional {
 }
 
 model Servicio {
-  id               String  @id @default(uuid())
-  despachoId       String
-  nombre           String
-  duracionMinutos  Int
-  precioCentimos   Int
-  activo           Boolean @default(true)
+  id              String  @id @default(uuid())
+  despachoId      String
+  nombre          String
+  duracionMinutos Int
+  precioCentimos  Int
+  activo          Boolean @default(true)
 
   despacho Despacho @relation(fields: [despachoId], references: [id])
   citas    Cita[]
@@ -63,6 +63,7 @@ model Cliente {
 
   despacho Despacho @relation(fields: [despachoId], references: [id])
   citas    Cita[]
+  solicitudesAcceso SolicitudAccesoCliente[]
 
   @@index([despachoId])
   @@map("clientes")
@@ -75,21 +76,72 @@ enum EstadoCita {
   no_asistida
 }
 
+enum OrigenCancelacion {
+  secretaria
+  cliente
+}
+
 model Cita {
-  id             String     @id @default(uuid())
+  id             String             @id @default(uuid())
   profesionalId  String
   servicioId     String
   clienteId      String
   inicio         DateTime
   fin            DateTime
-  estado         EstadoCita @default(reservada)
-  creadaEn       DateTime   @default(now())
-  actualizadaEn  DateTime   @updatedAt
+  estado         EstadoCita         @default(reservada)
+  canceladaPor   OrigenCancelacion?
+  creadaEn       DateTime           @default(now())
+  actualizadaEn  DateTime           @updatedAt
 
-  profesional Profesional @relation(fields: [profesionalId], references: [id])
-  servicio    Servicio    @relation(fields: [servicioId], references: [id])
-  cliente     Cliente     @relation(fields: [clienteId], references: [id])
+  profesional   Profesional    @relation(fields: [profesionalId], references: [id])
+  servicio      Servicio       @relation(fields: [servicioId], references: [id])
+  cliente       Cliente        @relation(fields: [clienteId], references: [id])
+  recordatorios Recordatorio[]
 
   @@index([profesionalId, inicio])
   @@map("citas")
+}
+
+enum EstadoRecordatorio {
+  enviado
+  omitido_sin_email
+}
+
+// Recordatorios de cita por email (feature 002-recordatorios-cita).
+// Ver specs/002-recordatorios-cita/data-model.md.
+model Recordatorio {
+  id          String             @id @default(uuid())
+  citaId      String
+  // Copia de Cita.inicio vigente cuando se generó este recordatorio; permite
+  // detectar reprogramaciones y reenviar (FR-009) sin perder el histórico.
+  citaInicio  DateTime
+  estado      EstadoRecordatorio
+  // Solo presente cuando estado = enviado; token impredecible del enlace de
+  // cancelación (FR-007a).
+  token       String?            @unique
+  generadoEn  DateTime           @default(now())
+  canceladoEn DateTime?
+
+  cita Cita @relation(fields: [citaId], references: [id])
+
+  // Deduplicación (FR-004): como máximo un recordatorio por cita/fecha.
+  @@unique([citaId, citaInicio])
+  @@index([citaId])
+  @@map("recordatorios")
+}
+
+/** Token de acceso de un solo uso al portal del cliente (002-portal-cliente-citas, FR-001, FR-001a). */
+model SolicitudAccesoCliente {
+  id         String    @id @default(uuid())
+  clienteId  String
+  tokenHash  String
+  expiraEn   DateTime
+  usadoEn    DateTime?
+  creadoEn   DateTime  @default(now())
+
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+
+  @@index([clienteId])
+  @@index([tokenHash])
+  @@map("solicitudes_acceso_cliente")
 }

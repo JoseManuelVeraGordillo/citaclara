@@ -18,6 +18,8 @@ export interface CitaHueco {
   clienteNombre: string;
   servicioNombre: string;
   estado: EstadoCita;
+  /** Recordatorio omitido por falta de email (002-recordatorios-cita, FR-012). */
+  sinRecordatorioEnviado?: boolean;
 }
 
 export interface Hueco {
@@ -27,8 +29,17 @@ export interface Hueco {
   cita?: CitaHueco;
 }
 
+export interface CitaCancelada {
+  id: string;
+  inicio: string; // ISO UTC
+  clienteNombre: string;
+  servicioNombre: string;
+  canceladaPor: 'secretaria' | 'cliente' | null;
+}
+
 export interface RespuestaAgendaDia {
   profesional: { id: string; nombre: string };
   fecha: string;
   huecos: Hueco[];
+  citasCanceladas: CitaCancelada[];
 }
