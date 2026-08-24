@@ -18,6 +18,11 @@
 - Q: ¿A qué nivel concreto de accesibilidad debe llegar la interfaz de secretaría? → A: Cumplir WCAG 2.1 nivel AA (contraste mínimo 4.5:1, texto redimensionable, navegable por teclado)
 - Q: ¿Puede haber varias personas de secretaría usando la agenda al mismo tiempo desde equipos distintos? → A: Sí, varias secretarias pueden trabajar a la vez desde equipos distintos con la misma clave compartida
 
+### Session 2026-08-24 (revisión cruzada con 002/003)
+
+- Q: Con la llegada del portal del cliente (002) y los recordatorios por email (003), que también pueden cancelar una cita, ¿quién es dueño del registro de qué canal originó una cancelación? → A: 001, como propietaria del modelo de datos de Cita y de su máquina de estados; ver FR-017 y [[especificación de revisión cruzada|000-revision-cruzada-agosto2026]].
+- Q: ¿La garantía de "una sola transición gana la carrera" (RN1/FR-005) cubre también los cambios de estado (completar/cancelar/no asistir) cuando llegan desde canales distintos a la agenda de secretaría (portal, email)? → A: Sí, se generaliza como FR-018: cualquier transición de estado de una cita, sea cual sea el canal que la origine, se aplica como máximo una vez.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Ver la agenda del día y dar de alta una cita (Priority: P1)
@@ -100,6 +105,8 @@ Un cliente pide cambiar su cita. Secretaría localiza la cita reservada y le cam
 - **FR-014**: El sistema MUST mostrar todas las fechas, horas e importes sin ambigüedad y en español de España, incluyendo formato de fecha/hora y símbolo de moneda (€).
 - **FR-015**: El sistema MUST poder poblarse mediante una semilla determinista que genera siempre el mismo despacho (Nuria Lagar Abogados), los mismos 3 profesionales, los mismos 4 servicios, unas ~40 fichas de cliente, 8 semanas de historia (~10% de citas no asistidas, ~8% canceladas) y 2 semanas futuras con reservas, reproduciendo exactamente los mismos datos en cada regeneración.
 - **FR-016**: La interfaz de secretaría MUST ser utilizable sin formación previa ni manual, con textos libres de jerga técnica, cumpliendo WCAG 2.1 nivel AA (contraste mínimo 4.5:1, texto redimensionable, navegable por teclado), y MUST funcionar correctamente tanto en portátil como en móvil.
+- **FR-017**: El sistema MUST registrar el origen de cada cancelación de una cita, distinguiendo entre `secretaria`, `cliente_portal` y `cliente_email`, de forma que el historial de la agenda pueda mostrar visualmente quién originó cada cancelación (secretaría o el propio cliente, y por qué canal). Este campo es propiedad del modelo de datos de Cita definido en esta spec; las features que añadan nuevos canales de cancelación (p. ej. 002-portal-cliente-citas, 003-recordatorios-cita) MUST reutilizar este mismo campo en lugar de definir uno propio.
+- **FR-018**: El sistema MUST garantizar que cualquier transición de estado de una cita (a completada, cancelada o no_asistida) se aplique como máximo una vez, sea cual sea el canal o feature que la origine (agenda de secretaría, portal del cliente, email de recordatorio, o cualquier otro futuro): ante dos intentos casi simultáneos de aplicar una transición final sobre la misma cita, el sistema MUST aplicar solo el primero y responder al resto de forma coherente con el estado real resultante, sin duplicar efectos ni dejar la cita en un estado inconsistente. Esta garantía generaliza, para cambios de estado, la misma protección de concurrencia que FR-005 ya exige para altas y reprogramaciones.
 
 ### Key Entities
 
@@ -107,7 +114,7 @@ Un cliente pide cambiar su cita. Secretaría localiza la cita reservada y le cam
 - **Profesional**: persona del despacho que atiende citas. Tiene nombre y especialidad (p. ej. abogado, administración), y pertenece a un despacho.
 - **Servicio**: tipo de cita que un profesional puede ofrecer. Tiene nombre, duración en minutos y precio en euros.
 - **Cliente**: ficha de la persona atendida por el despacho. Tiene nombre, apellidos, teléfono y email; no tiene acceso propio al sistema.
-- **Cita**: une un profesional, un servicio y un cliente, con un inicio y un fin (fin = inicio + duración del servicio). Tiene un estado que evoluciona de "reservada" a exactamente uno de "completada", "cancelada" o "no_asistida", de forma permanente.
+- **Cita**: une un profesional, un servicio y un cliente, con un inicio y un fin (fin = inicio + duración del servicio). Tiene un estado que evoluciona de "reservada" a exactamente uno de "completada", "cancelada" o "no_asistida", de forma permanente. Cuando el estado resultante es "cancelada", la cita MUST guardar además el origen de esa cancelación (`secretaria`, `cliente_portal` o `cliente_email`) para que el historial de la agenda lo muestre (FR-017).
 
 ## Success Criteria *(mandatory)*
 
@@ -128,3 +135,4 @@ Un cliente pide cambiar su cita. Secretaría localiza la cita reservada y le cam
 - Ninguna cita implica a más de un profesional ni a más de un servicio a la vez.
 - Cancelar o marcar una cita como no asistida no dispara ninguna notificación al cliente (los recordatorios son una spec propia, fuera de alcance).
 - La creación y edición de fichas de cliente es responsabilidad de secretaría dentro de esta misma interfaz de agenda; no existe portal de autoservicio para el cliente en esta spec.
+- El email de la ficha de cliente permanece obligatorio (FR-013): no se introduce ningún flujo de cliente sin email. Las features que dependan de contactar al cliente por email (p. ej. 003-recordatorios-cita) MUST asumir que todo cliente tiene email registrado y no necesitan contemplar una rama de "cliente sin email" (resolución acordada en [[000-revision-cruzada-agosto2026]]).
