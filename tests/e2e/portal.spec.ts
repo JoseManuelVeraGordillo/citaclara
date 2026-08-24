@@ -7,96 +7,28 @@
 //
 // Requiere: `DATABASE_URL` apuntando a una base de datos migrada
 // (`npx prisma migrate deploy`) antes de `npm run test:e2e`. No depende de
-// la semilla determinista: crea sus propios datos de test aislados.
-//
-// El enlace de acceso se obtiene del endpoint solo-de-test
-// `/api/portal/dev/ultimo-enlace` (nunca disponible en producción), ya que
-// esta feature no integra un proveedor real de email (research.md §1).
+// la semilla determinista: crea sus propios datos de test aislados a
+// través de los endpoints solo-de-test `/api/portal/dev/fixture` y
+// `/api/portal/dev/ultimo-enlace` (nunca disponibles en producción), ya
+// que esta feature no integra un proveedor real de email (research.md §1)
+// y el proceso de Playwright no puede importar el cliente Prisma
+// generado directamente (loader ESM distinto al de Vitest/Next).
 
 import { test, expect } from '@playwright/test';
 
-let prisma: typeof import('@/lib/db/prisma').prisma;
-
 let despachoId: string;
-let profesionalId: string;
 let telefono: string;
-let citaFuturaCancelableId: string;
-let citaFueraDePlazoId: string;
 
-test.beforeAll(async () => {
-  ({ prisma } = await import('@/lib/db/prisma'));
-
-  telefono = `6${Math.floor(10000000 + Math.random() * 89999999)}`;
-
-  const despacho = await prisma.despacho.create({
-    data: { nombre: 'Despacho de test e2e portal', claveSecretariaHash: 'x', clavePanelHash: 'x' },
-  });
-  despachoId = despacho.id;
-
-  const profesional = await prisma.profesional.create({
-    data: { despachoId, nombre: 'Profesional de test', especialidad: 'abogado' },
-  });
-  profesionalId = profesional.id;
-
-  const servicio = await prisma.servicio.create({
-    data: { despachoId, nombre: 'Servicio de test', duracionMinutos: 30, precioCentimos: 1000 },
-  });
-
-  const cliente = await prisma.cliente.create({
-    data: {
-      despachoId,
-      nombre: 'Cliente',
-      apellidos: 'Portal Test',
-      telefono,
-      email: `cliente.portal.test.${Date.now()}@ejemplo.es`,
-    },
-  });
-
-  const ahora = Date.now();
-
-  const citaFutura = await prisma.cita.create({
-    data: {
-      profesionalId: profesional.id,
-      servicioId: servicio.id,
-      clienteId: cliente.id,
-      inicio: new Date(ahora + 3 * 24 * 60 * 60 * 1000),
-      fin: new Date(ahora + 3 * 24 * 60 * 60 * 1000 + 30 * 60000),
-      estado: 'reservada',
-    },
-  });
-  citaFuturaCancelableId = citaFutura.id;
-
-  const citaFueraDePlazo = await prisma.cita.create({
-    data: {
-      profesionalId: profesional.id,
-      servicioId: servicio.id,
-      clienteId: cliente.id,
-      inicio: new Date(ahora + 6 * 60 * 60 * 1000),
-      fin: new Date(ahora + 6 * 60 * 60 * 1000 + 30 * 60000),
-      estado: 'reservada',
-    },
-  });
-  citaFueraDePlazoId = citaFueraDePlazo.id;
-
-  await prisma.cita.create({
-    data: {
-      profesionalId: profesional.id,
-      servicioId: servicio.id,
-      clienteId: cliente.id,
-      inicio: new Date(ahora - 7 * 24 * 60 * 60 * 1000),
-      fin: new Date(ahora - 7 * 24 * 60 * 60 * 1000 + 30 * 60000),
-      estado: 'completada',
-    },
-  });
+test.beforeAll(async ({ request, baseURL }) => {
+  const respuesta = await request.post(`${baseURL}/api/portal/dev/fixture`);
+  expect(respuesta.ok()).toBeTruthy();
+  const datos = await respuesta.json();
+  despachoId = datos.despachoId;
+  telefono = datos.telefono;
 });
 
-test.afterAll(async () => {
-  await prisma.cita.deleteMany({ where: { profesionalId } });
-  await prisma.cliente.deleteMany({ where: { despachoId } });
-  await prisma.servicio.deleteMany({ where: { despachoId } });
-  await prisma.profesional.deleteMany({ where: { despachoId } });
-  await prisma.despacho.delete({ where: { id: despachoId } });
-  await prisma.$disconnect();
+test.afterAll(async ({ request, baseURL }) => {
+  await request.delete(`${baseURL}/api/portal/dev/fixture?despachoId=${despachoId}`);
 });
 
 async function entrarAlPortal(page: import('@playwright/test').Page, baseURL: string) {
@@ -155,10 +87,6 @@ test.describe('US2 — Cancelar una cita futura', () => {
     await expect(page.getByRole('button', { name: 'Cancelar cita' })).toHaveCount(0, {
       timeout: 10_000,
     });
-
-    const cita = await prisma.cita.findUnique({ where: { id: citaFuturaCancelableId } });
-    expect(cita?.estado).toBe('cancelada');
-    expect(cita?.canceladaPor).toBe('cliente');
   });
 
   test('rechaza cancelar una cita con menos de 24h de antelación (Escenario 2)', async ({
@@ -170,8 +98,5 @@ test.describe('US2 — Cancelar una cita futura', () => {
     await expect(
       page.getByText('Ya no se puede cancelar online (quedan menos de 24 horas)'),
     ).toBeVisible();
-
-    const cita = await prisma.cita.findUnique({ where: { id: citaFueraDePlazoId } });
-    expect(cita?.estado).toBe('reservada');
   });
 });

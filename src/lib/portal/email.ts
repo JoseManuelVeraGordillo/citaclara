@@ -12,8 +12,20 @@ export interface EmailSender {
  * Último enlace "enviado" por destinatario, solo para que los tests e2e
  * (fuera de producción) puedan verificar el flujo de FR-001 sin un
  * proveedor real de email. Nunca se expone en `NODE_ENV=production`.
+ *
+ * En `globalThis` (mismo patrón que `lib/db/prisma.ts`): Next.js empaqueta
+ * cada route handler por separado, así que un `Map` a nivel de módulo no
+ * está garantizado como singleton real entre rutas distintas del mismo
+ * proceso; `globalThis` sí lo es.
  */
-export const ultimosEnviosTest = new Map<string, string>();
+const globalParaEnvios = globalThis as unknown as { ultimosEnviosTestPortal?: Map<string, string> };
+
+export const ultimosEnviosTest: Map<string, string> =
+  globalParaEnvios.ultimosEnviosTestPortal ?? new Map<string, string>();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalParaEnvios.ultimosEnviosTestPortal = ultimosEnviosTest;
+}
 
 class EmailSenderConsola implements EmailSender {
   async enviarEnlaceAcceso(destinatario: string, url: string): Promise<void> {
