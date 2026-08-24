@@ -12,9 +12,13 @@
 
 ### Session 2026-08-24
 
-- Q: ¿Necesita el enlace de cancelación del email llevar un identificador seguro e impredecible, para que nadie que no sea el cliente pueda adivinar el enlace de otra cita y cancelarla por error o malicia? → A: Sí, el enlace incluye un token único e impredecible por cita/recordatorio, imposible de adivinar.
-- Q: Cuando el proceso diario encuentra una cita dentro de la ventana cuyo cliente no tiene email registrado, ¿qué debe hacer el sistema? → A: Omitir esa cita (no genera `.eml`) y dejarla registrada como "sin recordatorio enviado" para que secretaría la revise.
+- Q: ¿Necesita el enlace de cancelación del email llevar un identificador seguro e impredecible, para que nadie que no sea el cliente pueda adivinar el enlace de otra cita y cancelarla por error o malicia? → A: Sí, el enlace incluye un token único e impredecible por cita/recordatorio, imposible de adivinar, con el mismo nivel de entropía y caducidad que el patrón de token de acceso sin contraseña definido en 002-portal-cliente-citas (ver FR-007a).
 - Q: Cuando una cita se reprograma fuera de la ventana de 24-48h después de haberse enviado ya su recordatorio, ¿debe pasar algo con ese recordatorio ya enviado? → A: No se hace nada especial: queda como histórico y, cuando la nueva fecha vuelva a entrar en ventana, se genera uno nuevo con normalidad (FR-009).
+
+### Session 2026-08-24 (revisión cruzada con 001/002)
+
+- Q: ¿Qué pasa si una cita dentro de la ventana tiene un cliente sin email registrado? → A: No puede ocurrir: 001-agenda-citas exige email obligatorio al crear la ficha de cliente (FR-013 de esa spec, confirmado en su modelo de datos), así que esta rama queda eliminada de la spec (se retira la clarificación original y FR-012); ver [[000-revision-cruzada-agosto2026]].
+- Q: ¿Con cuánta antelación puede cancelar el cliente desde el enlace del email? → A: Se corrige a las mismas 24 horas antes del inicio que ya exige el portal del cliente (002-portal-cliente-citas, FR-006), en vez del plazo "hasta el inicio de la cita" que tenía esta spec inicialmente: es una única política de cancelación por autoservicio del cliente, propiedad de 002, y este canal la reutiliza.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -59,8 +63,8 @@ El cliente que recibe el recordatorio y sabe que no va a poder asistir puede can
 
 **Acceptance Scenarios**:
 
-1. **Given** un cliente ha recibido el recordatorio de su cita, **When** pulsa el enlace de cancelación del email y confirma en la pantalla de confirmación antes del inicio de la cita, **Then** la cita pasa a estado cancelada y el hueco queda libre en la agenda.
-2. **Given** un cliente intenta cancelar desde el email después de la hora de inicio de la cita, **When** usa la forma de cancelación, **Then** el sistema le informa de que ya no puede cancelar por ese medio y la cita permanece reservada.
+1. **Given** un cliente ha recibido el recordatorio de su cita y el inicio de esta sigue a 24 horas o más del instante actual, **When** pulsa el enlace de cancelación del email y confirma en la pantalla de confirmación, **Then** la cita pasa a estado cancelada y el hueco queda libre en la agenda.
+2. **Given** un cliente intenta cancelar desde el email cuando el inicio de la cita está a menos de 24 horas del instante actual, **When** usa la forma de cancelación, **Then** el sistema le informa de que ya no puede cancelar por ese medio dentro de ese plazo y que debe contactar con el despacho, y la cita permanece reservada (mismo plazo y mismo mensaje que aplica en 002-portal-cliente-citas, FR-006).
 
 ---
 
@@ -71,7 +75,7 @@ El cliente que recibe el recordatorio y sabe que no va a poder asistir puede can
 - ¿Qué ocurre si una cita se cancela por otra vía (no desde el email) después de que ya se generó su recordatorio? El recordatorio ya emitido no debe reactivar la cita ni generarse de nuevo.
 - ¿Qué ocurre si el proceso diario no se ejecuta un día (por ejemplo, el despacho está cerrado o hay un fallo) y al día siguiente hay citas que ya deberían haber recibido recordatorio? El proceso siguiente debe seguir detectándolas mientras sigan dentro de la ventana de antelación.
 - ¿Qué ocurre si dos citas del mismo cliente caen ambas dentro de la ventana el mismo día? Cada cita reservada recibe su propio recordatorio independiente.
-- Si una cita dentro de la ventana no tiene email de cliente registrado, no se genera recordatorio para ella y queda marcada como "sin recordatorio enviado" para revisión de secretaría; el resto de citas del proceso diario se procesan con normalidad.
+- Si la cancelación desde el email llega casi al mismo tiempo que una cancelación (u otro cambio de estado) desde el portal del cliente o desde la agenda de secretaría sobre la misma cita, el sistema MUST aplicar la transición como máximo una vez y responder de forma coherente al resto de intentos, siguiendo la garantía general de idempotencia de transiciones de estado que define 001-agenda-citas (FR-018 de esa spec).
 
 ## Requirements *(mandatory)*
 
@@ -83,18 +87,18 @@ El cliente que recibe el recordatorio y sabe que no va a poder asistir puede can
 - **FR-004**: El sistema MUST garantizar que cada cita reservada recibe como máximo un recordatorio, incluso si el proceso diario se ejecuta varias veces sobre la misma cita.
 - **FR-005**: El sistema MUST excluir del envío de recordatorios las citas que ya estén canceladas en el momento de ejecutar el proceso.
 - **FR-006**: El correo de recordatorio MUST incluir una forma de que el cliente cancele la cita si no va a asistir.
-- **FR-007**: El sistema MUST llevar al cliente que pulsa el enlace de cancelación a una pantalla de confirmación explícita ("sí, cancelar") antes de liberar el hueco de agenda correspondiente, sin exigir inicio de sesión; la cancelación por este medio se admite hasta el inicio de la cita.
-- **FR-007a**: El enlace de cancelación MUST incluir un token único e impredecible por recordatorio, de modo que no sea posible adivinar o deducir el enlace de otra cita distinta.
-- **FR-008**: El sistema MUST informar al cliente cuando intenta cancelar desde el email después del inicio de la cita, dejando la cita reservada sin cambios.
+- **FR-007**: El sistema MUST llevar al cliente que pulsa el enlace de cancelación a una pantalla de confirmación explícita ("sí, cancelar") antes de liberar el hueco de agenda correspondiente, sin exigir inicio de sesión; la cancelación por este medio se admite únicamente cuando el inicio de la cita esté a 24 horas o más del instante actual, el mismo plazo que exige 002-portal-cliente-citas para la cancelación desde el portal (FR-006 de esa spec): es una única política de cancelación por autoservicio del cliente, propiedad de 002, que este canal reutiliza en lugar de fijar un plazo propio.
+- **FR-007a**: El enlace de cancelación MUST incluir un token único e impredecible por recordatorio, de modo que no sea posible adivinar o deducir el enlace de otra cita distinta, aplicando el mismo patrón de token de acceso de cliente sin contraseña (un solo uso, caducidad limitada, entropía suficiente) que define 002-portal-cliente-citas, en vez de un criterio de seguridad propio.
+- **FR-007b**: Cuando la cancelación se aplica desde este canal, el sistema MUST registrar el origen de la cancelación como `cliente_email` en el campo de origen de cancelación que define 001-agenda-citas (FR-017 de esa spec), de modo que la agenda de secretaría lo muestre igual que cualquier otra cancelación de origen cliente.
+- **FR-008**: El sistema MUST informar al cliente cuando intenta cancelar desde el email con el inicio de la cita a menos de 24 horas del instante actual, indicando que debe contactar con el despacho para gestionarlo dentro de ese plazo y dejando la cita reservada sin cambios.
 - **FR-009**: El sistema MUST reenviar el recordatorio cuando una cita se reprograma a una fecha/hora distinta después de haber sido notificada, siempre que la nueva fecha/hora vuelva a entrar en la ventana de antelación de 24-48 horas; el recordatorio previo no cuenta como válido para la nueva fecha.
 - **FR-010**: Todo texto del correo de recordatorio MUST redactarse en español de España, con fechas, horas y datos de la cita expresados sin ambigüedad.
 - **FR-011**: El sistema MUST quedar fuera de alcance en v1 para el envío de recordatorios por SMS o WhatsApp.
-- **FR-012**: El sistema MUST omitir la generación de recordatorio para una cita cuyo cliente no tenga email registrado, y MUST dejar constancia de esa cita como "sin recordatorio enviado" para que secretaría pueda revisarla y avisar al cliente por otro medio.
 
 ### Key Entities
 
-- **Recordatorio de Cita**: Representa el aviso generado para una cita concreta; se relaciona 1:1 con la cita y la fecha/hora que lo originó (una reprogramación fuera de ventana puede generar un recordatorio nuevo asociado a la nueva fecha), guarda el momento en que se generó (para evitar duplicados), un token único e impredecible para el enlace de cancelación, y su estado (generado, cancelación aplicada, cancelación ya no admitida por haber pasado el inicio de la cita).
-- **Cita**: La reserva existente en la agenda del despacho para un cliente con un profesional en una fecha/hora concreta; su estado (reservada, cancelada) determina si es candidata a recordatorio.
+- **Recordatorio de Cita**: Representa el aviso generado para una cita concreta; se relaciona 1:1 con la cita y la fecha/hora que lo originó (una reprogramación fuera de ventana puede generar un recordatorio nuevo asociado a la nueva fecha), guarda el momento en que se generó (para evitar duplicados), un token único e impredecible para el enlace de cancelación, y su estado (generado, cancelación aplicada, cancelación ya no admitida por estar el inicio de la cita a menos de 24 horas).
+- **Cita**: La reserva existente en la agenda del despacho para un cliente con un profesional en una fecha/hora concreta; su estado (reservada, cancelada) determina si es candidata a recordatorio. Al cancelarse desde este canal, guarda `cliente_email` en el campo de origen de cancelación propiedad de 001-agenda-citas (FR-017 de esa spec).
 - **Fichero de Correo Simulado (.eml)**: Representa el correo de recordatorio en modo simulado, escrito en `datos/salida-correo/`; contiene los datos de la cita y el mecanismo de cancelación.
 
 ## Success Criteria *(mandatory)*
@@ -109,7 +113,7 @@ El cliente que recibe el recordatorio y sabe que no va a poder asistir puede can
 ## Assumptions
 
 - El proceso diario se ejecuta una vez al día (no en tiempo real ni varias veces al día) sobre el conjunto de citas reservadas.
-- Los datos de contacto (email) de cada cliente ya existen en el sistema como parte de la cita reservada; esta feature no cubre su captura ni validación.
+- Los datos de contacto (email) de cada cliente ya existen en el sistema y son obligatorios en toda ficha de cliente (001-agenda-citas, FR-013 y su modelo de datos); esta feature no cubre su captura ni validación, y no necesita contemplar el caso de un cliente sin email registrado.
 - El modo simulado de correo (`.eml` en `datos/salida-correo/`) es una decisión temporal para v1 mientras no haya SMTP configurado; la sustitución por envío real queda fuera de alcance de esta spec.
 - "Cancelar desde el email" se resuelve mediante un enlace o acción incluida en el propio correo que el cliente puede usar sin necesidad de iniciar sesión en un portal aparte, dado el perfil de usuario objetivo (cliente de despacho de abogados, no necesariamente familiarizado con tecnología).
 - El hueco de agenda liberado por una cancelación queda disponible para nueva reserva de forma inmediata, siguiendo el comportamiento ya existente de cancelación de citas en el sistema.
