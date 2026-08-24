@@ -6,7 +6,13 @@ import { Input } from '@/components/ui/input';
 import { VistaHuecos } from '@/app/agenda/components/vista-huecos';
 import { FormularioAlta } from '@/app/agenda/components/formulario-alta';
 import { ModalReprogramar } from '@/app/agenda/components/modal-reprogramar';
-import type { Hueco, Profesional, RespuestaAgendaDia, Servicio } from '@/app/agenda/tipos';
+import type {
+  CitaCancelada,
+  Hueco,
+  Profesional,
+  RespuestaAgendaDia,
+  Servicio,
+} from '@/app/agenda/tipos';
 
 interface Props {
   profesionales: Profesional[];
@@ -18,6 +24,7 @@ export function AgendaClient({ profesionales, servicios, fechaInicial }: Props) 
   const [profesionalId, setProfesionalId] = useState(profesionales[0]?.id ?? '');
   const [fecha, setFecha] = useState(fechaInicial);
   const [huecos, setHuecos] = useState<Hueco[]>([]);
+  const [citasCanceladas, setCitasCanceladas] = useState<CitaCancelada[]>([]);
   const [cargando, setCargando] = useState(false);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [huecoParaReservar, setHuecoParaReservar] = useState<Hueco | null>(null);
@@ -35,6 +42,7 @@ export function AgendaClient({ profesionales, servicios, fechaInicial }: Props) 
       }
       const datos: RespuestaAgendaDia = await respuesta.json();
       setHuecos(datos.huecos);
+      setCitasCanceladas(datos.citasCanceladas);
     } finally {
       setCargando(false);
     }
@@ -85,6 +93,7 @@ export function AgendaClient({ profesionales, servicios, fechaInicial }: Props) 
       {!cargando && !errorCarga && (
         <VistaHuecos
           huecos={huecos}
+          citasCanceladas={citasCanceladas}
           onReservar={setHuecoParaReservar}
           onReprogramar={setHuecoParaReprogramar}
           onCambio={cargarAgenda}

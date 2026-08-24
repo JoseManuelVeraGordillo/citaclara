@@ -63,6 +63,7 @@ model Cliente {
 
   despacho Despacho @relation(fields: [despachoId], references: [id])
   citas    Cita[]
+  solicitudesAcceso SolicitudAccesoCliente[]
 
   @@index([despachoId])
   @@map("clientes")
@@ -75,16 +76,22 @@ enum EstadoCita {
   no_asistida
 }
 
+enum OrigenCancelacion {
+  secretaria
+  cliente
+}
+
 model Cita {
-  id             String     @id @default(uuid())
+  id             String             @id @default(uuid())
   profesionalId  String
   servicioId     String
   clienteId      String
   inicio         DateTime
   fin            DateTime
-  estado         EstadoCita @default(reservada)
-  creadaEn       DateTime   @default(now())
-  actualizadaEn  DateTime   @updatedAt
+  estado         EstadoCita         @default(reservada)
+  canceladaPor   OrigenCancelacion?
+  creadaEn       DateTime           @default(now())
+  actualizadaEn  DateTime           @updatedAt
 
   profesional Profesional @relation(fields: [profesionalId], references: [id])
   servicio    Servicio    @relation(fields: [servicioId], references: [id])
@@ -92,4 +99,20 @@ model Cita {
 
   @@index([profesionalId, inicio])
   @@map("citas")
+}
+
+/** Token de acceso de un solo uso al portal del cliente (002-portal-cliente-citas, FR-001, FR-001a). */
+model SolicitudAccesoCliente {
+  id         String    @id @default(uuid())
+  clienteId  String
+  tokenHash  String
+  expiraEn   DateTime
+  usadoEn    DateTime?
+  creadoEn   DateTime  @default(now())
+
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+
+  @@index([clienteId])
+  @@index([tokenHash])
+  @@map("solicitudes_acceso_cliente")
 }

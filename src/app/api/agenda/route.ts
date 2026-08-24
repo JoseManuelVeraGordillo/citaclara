@@ -41,6 +41,11 @@ export async function GET(request: NextRequest) {
     orderBy: { inicio: 'asc' },
   });
 
+  // Historial de cancelaciones del día (FR-007a): las citas canceladas
+  // liberan el hueco (no aparecen en `huecos` como ocupadas), pero secretaría
+  // debe poder ver, en el historial, si el origen fue el propio cliente.
+  const citasCanceladas = citas.filter((c) => c.estado === 'cancelada');
+
   const huecos = calcularHuecos(
     fecha,
     citas.map((c) => ({
@@ -61,6 +66,13 @@ export async function GET(request: NextRequest) {
       fin: h.fin.toISOString(),
       estado: h.estado,
       ...(h.cita ? { cita: h.cita } : {}),
+    })),
+    citasCanceladas: citasCanceladas.map((c) => ({
+      id: c.id,
+      inicio: c.inicio.toISOString(),
+      clienteNombre: `${c.cliente.nombre} ${c.cliente.apellidos}`,
+      servicioNombre: c.servicio.nombre,
+      canceladaPor: c.canceladaPor,
     })),
   });
 }
