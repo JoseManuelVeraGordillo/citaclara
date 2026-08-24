@@ -8,15 +8,22 @@
 
 **Input**: User description: "Panel de analítica para el despacho. Jose lo necesita para las renovaciones: 'enseñar al despacho lo que CitaClara le ahorra'. Alcance: una página del panel (misma clave que la agenda), con interfaz moderna y gráficos claros: ocupación semanal por profesional, tasa de no asistencia por profesional, ingresos por servicio (citas completadas; importes exactos, al céntimo), y evolución de las últimas 8 semanas. Solo lectura: esta feature no escribe NADA. Construye los ejemplos de la spec con los números reales de la semilla (p. ej., la tasa de no asistencia real de cada profesional). Preguntas cerradas para Jose: ¿cómo se define exactamente 'tasa de no asistencia' y 'ocupación'?"
 
+## Clarifications
+
+### Session 2026-08-24
+
+- Q: ¿El desglose de "ingresos por servicio" (User Story 1 / FR-004) debe mostrar el total histórico de todas las citas completadas desde siempre, o limitarse a las mismas últimas 8 semanas completas que usa la evolución? → A: Limitado a las últimas 8 semanas completas, igual que la evolución.
+- Q: ¿Qué debe representar exactamente el gráfico de "evolución de las últimas 8 semanas" (User Story 4 / FR-005): solo el total del despacho, o una serie por profesional? → A: Una serie por profesional (3 líneas de citas/ingresos, una por profesional).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Ver los ingresos que genera cada servicio (Priority: P1)
 
 Jose abre el panel de analítica y ve, de un vistazo, cuánto ha facturado el
-despacho por cada tipo de servicio (solo citas completadas), con importes
-exactos al céntimo. Es el argumento económico central para una conversación
-de renovación: "esto es lo que ha generado el despacho gestionando citas con
-CitaClara".
+despacho por cada tipo de servicio (solo citas completadas) durante las
+últimas 8 semanas completas, con importes exactos al céntimo. Es el
+argumento económico central para una conversación de renovación: "esto es
+lo que ha generado el despacho gestionando citas con CitaClara".
 
 **Why this priority**: Es el dato con más peso comercial para justificar la
 renovación ante el despacho: una cifra de facturación concreta, verificable
@@ -24,23 +31,28 @@ y exacta.
 
 **Independent Test**: Puede probarse abriendo el panel y comprobando que el
 desglose de ingresos por servicio coincide, céntimo a céntimo, con la suma
-de `precioCentimos` de las citas `completada` de los datos de demostración.
+de `precioCentimos` de las citas `completada` cuya fecha cae dentro de las
+últimas 8 semanas completas (la misma ventana que usa la evolución de la
+User Story 4).
 
 **Acceptance Scenarios**:
 
 1. **Given** el despacho tiene citas en estado `completada` para varios
-   servicios, **When** Jose abre el panel, **Then** ve un importe en euros
-   con céntimos por cada servicio y el total, exacto respecto a la suma de
-   las citas `completada` (p. ej., con los datos de la semilla: "Redacción
-   de contrato" → 26.880,00 €, "Primera consulta" → 15.780,00 €, "Gestión
-   administrativa" → 11.600,00 €, "Consulta de seguimiento" → 11.430,00 €;
-   total 65.690,00 €).
-2. **Given** un servicio no tiene ninguna cita `completada` en el periodo
-   mostrado, **When** Jose consulta el desglose, **Then** el servicio
-   aparece con importe 0,00 € en lugar de desaparecer de la lista.
+   servicios dentro de las últimas 8 semanas completas, **When** Jose abre
+   el panel, **Then** ve un importe en euros con céntimos por cada
+   servicio y el total, exacto respecto a la suma de esas citas (p. ej.,
+   con los datos de la semilla, ventana 2026-06-22 a 2026-08-16:
+   "Redacción de contrato" → 26.280,00 €, "Primera consulta" →
+   15.600,00 €, "Gestión administrativa" → 11.300,00 €, "Consulta de
+   seguimiento" → 10.845,00 €; total 64.025,00 €).
+2. **Given** un servicio no tiene ninguna cita `completada` en la ventana
+   de las últimas 8 semanas completas, **When** Jose consulta el
+   desglose, **Then** el servicio aparece con importe 0,00 € en lugar de
+   desaparecer de la lista.
 3. **Given** existen citas `reservada`, `cancelada` o `no_asistida` para un
-   servicio, **When** se calcula el ingreso de ese servicio, **Then** esas
-   citas NO se incluyen en el importe (solo cuentan las `completada`).
+   servicio, o citas `completada` fuera de la ventana de 8 semanas,
+   **When** se calcula el ingreso de ese servicio, **Then** esas citas NO
+   se incluyen en el importe.
 
 ---
 
@@ -108,35 +120,44 @@ acordada).
 
 ### User Story 4 - Ver la evolución de las últimas 8 semanas (Priority: P2)
 
-Jose abre el panel y ve cómo han evolucionado citas e ingresos del despacho
-a lo largo de las últimas 8 semanas completas, para mostrar una tendencia
-(no solo una foto fija) durante la conversación de renovación.
+Jose abre el panel y ve cómo ha evolucionado, semana a semana y por
+profesional, el número de citas y los ingresos del despacho a lo largo de
+las últimas 8 semanas completas, para mostrar una tendencia (no solo una
+foto fija) y poder comparar cómo progresa cada profesional durante la
+conversación de renovación.
 
 **Why this priority**: Es el argumento de "tendencia sostenida en el
 tiempo" que refuerza los otros tres, pero depende conceptualmente de que
 ingresos y ocupación ya existan como métricas — por eso se prioriza después.
 
 **Independent Test**: Puede probarse abriendo el panel y comprobando que el
-gráfico de evolución muestra 8 puntos (uno por semana completa), y que el
-valor de cada semana coincide con el recuento/suma de esa semana en los
-datos de demostración (p. ej., con los datos de la semilla: semana
-2026-06-22 → 145 citas / 8.610,00 € en completadas; semana 2026-08-10 → 144
-citas / 7.825,00 € en completadas).
+gráfico de evolución muestra 8 puntos por profesional (uno por semana
+completa, una serie por cada uno de los tres profesionales), y que el
+valor de cada punto coincide con el recuento/suma de esa semana y ese
+profesional en los datos de demostración (p. ej., con los datos de la
+semilla, semana 2026-06-22: Nuria Lagar 49 citas / 2.735,00 € en
+completadas, David Rayo 48 citas / 3.130,00 € en completadas, Jose Lagar
+48 citas / 2.745,00 € en completadas).
 
 **Acceptance Scenarios**:
 
 1. **Given** el despacho tiene 8 semanas completas de historia o más,
-   **When** Jose consulta la evolución, **Then** ve exactamente 8 semanas,
-   ordenadas cronológicamente, con la semana más reciente completa al
-   final.
+   **When** Jose consulta la evolución, **Then** ve exactamente 8 semanas
+   por cada profesional, ordenadas cronológicamente, con la semana más
+   reciente completa al final, y puede distinguir visualmente la serie de
+   cada profesional.
 2. **Given** la semana actual está en curso (aún no ha terminado), **When**
    se calculan las "últimas 8 semanas", **Then** la semana en curso NO se
    cuenta como una de las 8 (se muestran las 8 semanas completas
    anteriores).
 3. **Given** el despacho tiene menos de 8 semanas de historia, **When** Jose
    consulta la evolución, **Then** el panel muestra únicamente las semanas
-   completas disponibles, indicando claramente que el histórico es más
-   corto (sin rellenar con datos inventados).
+   completas disponibles para cada profesional, indicando claramente que
+   el histórico es más corto (sin rellenar con datos inventados).
+4. **Given** un profesional no tiene ninguna cita en una semana concreta de
+   la ventana, **When** Jose consulta su serie de evolución, **Then** esa
+   semana se muestra con 0 citas / 0,00 € para ese profesional, sin
+   romper la serie ni el gráfico.
 
 ---
 
@@ -179,12 +200,14 @@ citas / 7.825,00 € en completadas).
   total de sus citas históricas resueltas (`completada` + `cancelada` +
   `no_asistida`).
 - **FR-004**: El sistema MUST mostrar, para cada servicio, la suma de
-  importes de sus citas en estado `completada`, expresada en euros con
+  importes de sus citas en estado `completada` dentro de las últimas 8
+  semanas completas (misma ventana que FR-005), expresada en euros con
   céntimos exactos (sin redondeos que introduzcan descuadre), junto con el
   total general.
 - **FR-005**: El sistema MUST mostrar una evolución temporal (citas e
-  ingresos) de las últimas 8 semanas completas, excluyendo la semana en
-  curso si está incompleta.
+  ingresos) de las últimas 8 semanas completas desglosada por profesional
+  (una serie por cada profesional, no solo un total agregado del
+  despacho), excluyendo la semana en curso si está incompleta.
 - **FR-006**: El sistema MUST ser de solo lectura: ninguna interacción del
   panel MUST crear, modificar ni eliminar citas, clientes, profesionales,
   servicios ni ningún otro dato del despacho.

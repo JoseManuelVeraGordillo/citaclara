@@ -37,4 +37,9 @@
   (`completada`+`cancelada`+`no_asistida`); ocupación = solo
   `reservada`+`completada` cuentan como hueco ocupado (igual que
   `calcularHuecos` en la agenda).
+- Sesión de `/speckit-clarify` del 2026-08-24: 2 preguntas adicionales
+  resueltas (ventana temporal de "ingresos por servicio" → últimas 8
+  semanas completas, igual que la evolución; alcance del gráfico de
+  "evolución" → desglosado por profesional, no agregado del despacho).
+  Ver `## Clarifications` en spec.md.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
