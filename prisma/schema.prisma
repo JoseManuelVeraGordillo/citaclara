@@ -1,0 +1,95 @@
+// Esquema de datos de CitaClara — ver specs/001-agenda-citas/data-model.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Despacho {
+  id                  String   @id @default(uuid())
+  nombre              String
+  claveSecretariaHash String
+  clavePanelHash      String
+  creadoEn            DateTime @default(now())
+
+  profesionales Profesional[]
+  servicios     Servicio[]
+  clientes      Cliente[]
+
+  @@map("despachos")
+}
+
+model Profesional {
+  id            String  @id @default(uuid())
+  despachoId    String
+  nombre        String
+  especialidad  String
+  activo        Boolean @default(true)
+
+  despacho Despacho @relation(fields: [despachoId], references: [id])
+  citas    Cita[]
+
+  @@index([despachoId])
+  @@map("profesionales")
+}
+
+model Servicio {
+  id               String  @id @default(uuid())
+  despachoId       String
+  nombre           String
+  duracionMinutos  Int
+  precioCentimos   Int
+  activo           Boolean @default(true)
+
+  despacho Despacho @relation(fields: [despachoId], references: [id])
+  citas    Cita[]
+
+  @@index([despachoId])
+  @@map("servicios")
+}
+
+model Cliente {
+  id         String   @id @default(uuid())
+  despachoId String
+  nombre     String
+  apellidos  String
+  telefono   String
+  email      String
+  creadoEn   DateTime @default(now())
+
+  despacho Despacho @relation(fields: [despachoId], references: [id])
+  citas    Cita[]
+
+  @@index([despachoId])
+  @@map("clientes")
+}
+
+enum EstadoCita {
+  reservada
+  completada
+  cancelada
+  no_asistida
+}
+
+model Cita {
+  id             String     @id @default(uuid())
+  profesionalId  String
+  servicioId     String
+  clienteId      String
+  inicio         DateTime
+  fin            DateTime
+  estado         EstadoCita @default(reservada)
+  creadaEn       DateTime   @default(now())
+  actualizadaEn  DateTime   @updatedAt
+
+  profesional Profesional @relation(fields: [profesionalId], references: [id])
+  servicio    Servicio    @relation(fields: [servicioId], references: [id])
+  cliente     Cliente     @relation(fields: [clienteId], references: [id])
+
+  @@index([profesionalId, inicio])
+  @@map("citas")
+}
