@@ -18,6 +18,8 @@ export interface CitaHueco {
   clienteNombre: string;
   servicioNombre: string;
   estado: EstadoCita;
+  /** Recordatorio omitido por falta de email (002-recordatorios-cita, FR-012). */
+  sinRecordatorioEnviado?: boolean;
 }
 
 export interface Hueco {

@@ -97,6 +97,15 @@ export function VistaHuecos({ huecos, onReservar, onReprogramar, onCambio }: Pro
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {cita ? `${cita.clienteNombre} — ${cita.servicioNombre}` : '—'}
+                    {cita?.sinRecordatorioEnviado && (
+                      <Badge
+                        variant="outline"
+                        className="ml-2 text-destructive"
+                        aria-label={`Sin recordatorio enviado a ${cita.clienteNombre}: falta email`}
+                      >
+                        Sin recordatorio (falta email)
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     {libre && (

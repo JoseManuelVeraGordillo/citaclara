@@ -8,6 +8,14 @@
 
 **Input**: User description: "Recordatorios de cita. El dolor número uno del cliente piloto: la no asistencia. Alcance: un proceso diario genera un recordatorio por email para cada cita reservada de las próximas 24-48 horas, sin duplicar envíos; el email incluye los datos de la cita y una forma de que el cliente cancele si no va a ir (mejor un hueco libre que un no-show). Correo en modo simulado sin SMTP configurado: se escriben ficheros .eml en datos/salida-correo/. Preguntas cerradas para Jose: antelación exacta, qué pasa si el paciente cancela desde el email y con cuánta antelación puede, y si el recordatorio se reenvía cuando la cita se mueve. Fuera de alcance v1: SMS y WhatsApp."
 
+## Clarifications
+
+### Session 2026-08-24
+
+- Q: ¿Necesita el enlace de cancelación del email llevar un identificador seguro e impredecible, para que nadie que no sea el cliente pueda adivinar el enlace de otra cita y cancelarla por error o malicia? → A: Sí, el enlace incluye un token único e impredecible por cita/recordatorio, imposible de adivinar.
+- Q: Cuando el proceso diario encuentra una cita dentro de la ventana cuyo cliente no tiene email registrado, ¿qué debe hacer el sistema? → A: Omitir esa cita (no genera `.eml`) y dejarla registrada como "sin recordatorio enviado" para que secretaría la revise.
+- Q: Cuando una cita se reprograma fuera de la ventana de 24-48h después de haberse enviado ya su recordatorio, ¿debe pasar algo con ese recordatorio ya enviado? → A: No se hace nada especial: queda como histórico y, cuando la nueva fecha vuelva a entrar en ventana, se genera uno nuevo con normalidad (FR-009).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Recordatorio automático antes de la cita (Priority: P1)
@@ -58,10 +66,12 @@ El cliente que recibe el recordatorio y sabe que no va a poder asistir puede can
 
 ### Edge Cases
 
-- Si una cita se reprograma (cambia de fecha/hora) después de que ya se envió su recordatorio, y la nueva fecha vuelve a entrar en la ventana de 24-48h, el sistema genera un nuevo recordatorio para la nueva fecha/hora (el recordatorio anterior queda obsoleto).
+- Si una cita se reprograma (cambia de fecha/hora) después de que ya se envió su recordatorio, y la nueva fecha vuelve a entrar en la ventana de 24-48h, el sistema genera un nuevo recordatorio para la nueva fecha/hora (el recordatorio anterior queda como histórico, sin necesidad de invalidarlo explícitamente).
+- Si una cita se reprograma fuera de la ventana de 24-48h (por ejemplo, se aplaza varias semanas) después de que ya se envió su recordatorio, no se toma ninguna acción sobre ese recordatorio ya enviado; simplemente se generará uno nuevo cuando la nueva fecha vuelva a entrar en ventana.
 - ¿Qué ocurre si una cita se cancela por otra vía (no desde el email) después de que ya se generó su recordatorio? El recordatorio ya emitido no debe reactivar la cita ni generarse de nuevo.
 - ¿Qué ocurre si el proceso diario no se ejecuta un día (por ejemplo, el despacho está cerrado o hay un fallo) y al día siguiente hay citas que ya deberían haber recibido recordatorio? El proceso siguiente debe seguir detectándolas mientras sigan dentro de la ventana de antelación.
 - ¿Qué ocurre si dos citas del mismo cliente caen ambas dentro de la ventana el mismo día? Cada cita reservada recibe su propio recordatorio independiente.
+- Si una cita dentro de la ventana no tiene email de cliente registrado, no se genera recordatorio para ella y queda marcada como "sin recordatorio enviado" para revisión de secretaría; el resto de citas del proceso diario se procesan con normalidad.
 
 ## Requirements *(mandatory)*
 
@@ -74,14 +84,16 @@ El cliente que recibe el recordatorio y sabe que no va a poder asistir puede can
 - **FR-005**: El sistema MUST excluir del envío de recordatorios las citas que ya estén canceladas en el momento de ejecutar el proceso.
 - **FR-006**: El correo de recordatorio MUST incluir una forma de que el cliente cancele la cita si no va a asistir.
 - **FR-007**: El sistema MUST llevar al cliente que pulsa el enlace de cancelación a una pantalla de confirmación explícita ("sí, cancelar") antes de liberar el hueco de agenda correspondiente, sin exigir inicio de sesión; la cancelación por este medio se admite hasta el inicio de la cita.
+- **FR-007a**: El enlace de cancelación MUST incluir un token único e impredecible por recordatorio, de modo que no sea posible adivinar o deducir el enlace de otra cita distinta.
 - **FR-008**: El sistema MUST informar al cliente cuando intenta cancelar desde el email después del inicio de la cita, dejando la cita reservada sin cambios.
 - **FR-009**: El sistema MUST reenviar el recordatorio cuando una cita se reprograma a una fecha/hora distinta después de haber sido notificada, siempre que la nueva fecha/hora vuelva a entrar en la ventana de antelación de 24-48 horas; el recordatorio previo no cuenta como válido para la nueva fecha.
 - **FR-010**: Todo texto del correo de recordatorio MUST redactarse en español de España, con fechas, horas y datos de la cita expresados sin ambigüedad.
 - **FR-011**: El sistema MUST quedar fuera de alcance en v1 para el envío de recordatorios por SMS o WhatsApp.
+- **FR-012**: El sistema MUST omitir la generación de recordatorio para una cita cuyo cliente no tenga email registrado, y MUST dejar constancia de esa cita como "sin recordatorio enviado" para que secretaría pueda revisarla y avisar al cliente por otro medio.
 
 ### Key Entities
 
-- **Recordatorio de Cita**: Representa el aviso generado para una cita concreta; se relaciona 1:1 con la cita que lo origina, guarda el momento en que se generó (para evitar duplicados) y su estado (generado, cancelación aplicada, plazo de cancelación agotado).
+- **Recordatorio de Cita**: Representa el aviso generado para una cita concreta; se relaciona 1:1 con la cita y la fecha/hora que lo originó (una reprogramación fuera de ventana puede generar un recordatorio nuevo asociado a la nueva fecha), guarda el momento en que se generó (para evitar duplicados), un token único e impredecible para el enlace de cancelación, y su estado (generado, cancelación aplicada, cancelación ya no admitida por haber pasado el inicio de la cita).
 - **Cita**: La reserva existente en la agenda del despacho para un cliente con un profesional en una fecha/hora concreta; su estado (reservada, cancelada) determina si es candidata a recordatorio.
 - **Fichero de Correo Simulado (.eml)**: Representa el correo de recordatorio en modo simulado, escrito en `datos/salida-correo/`; contiene los datos de la cita y el mecanismo de cancelación.
 

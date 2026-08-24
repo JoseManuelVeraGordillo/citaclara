@@ -10,6 +10,7 @@
     "seed": "tsx prisma/seed.ts",
     "seed:reset": "prisma migrate reset --force",
     "seed:snapshot": "tsx prisma/scripts/seed-snapshot.ts",
+    "recordatorios:enviar": "tsx scripts/enviar-recordatorios.ts",
     "test": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration --no-file-parallelism",
     "test:e2e": "playwright test"
