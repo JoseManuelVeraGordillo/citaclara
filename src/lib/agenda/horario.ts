@@ -48,6 +48,8 @@ export interface CitaOcupada {
   clienteNombre: string;
   servicioNombre: string;
   estado: 'reservada' | 'completada' | 'cancelada' | 'no_asistida';
+  /** Recordatorio omitido por falta de email (002-recordatorios-cita, FR-012). */
+  sinRecordatorioEnviado?: boolean;
 }
 
 export interface Hueco {
@@ -59,6 +61,7 @@ export interface Hueco {
     clienteNombre: string;
     servicioNombre: string;
     estado: 'reservada' | 'completada' | 'cancelada' | 'no_asistida';
+    sinRecordatorioEnviado?: boolean;
   };
 }
 
@@ -93,6 +96,7 @@ export function calcularHuecos(fechaIso: string, citas: CitaOcupada[]): Hueco[] 
           clienteNombre: cita.clienteNombre,
           servicioNombre: cita.servicioNombre,
           estado: cita.estado,
+          sinRecordatorioEnviado: cita.sinRecordatorioEnviado,
         },
       });
       cursor = finCita;

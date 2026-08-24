@@ -37,7 +37,11 @@ export async function GET(request: NextRequest) {
       inicio: { lte: finDia },
       fin: { gte: inicioDia },
     },
-    include: { cliente: true, servicio: true },
+    include: {
+      cliente: true,
+      servicio: true,
+      recordatorios: { where: { estado: 'omitido_sin_email' }, select: { citaInicio: true } },
+    },
     orderBy: { inicio: 'asc' },
   });
 
@@ -55,6 +59,11 @@ export async function GET(request: NextRequest) {
       clienteNombre: `${c.cliente.nombre} ${c.cliente.apellidos}`,
       servicioNombre: c.servicio.nombre,
       estado: c.estado,
+      // 002-recordatorios-cita (FR-012): visible para secretaría cuando el
+      // cliente no tiene email y el proceso diario omitió el recordatorio.
+      sinRecordatorioEnviado: c.recordatorios.some(
+        (r) => r.citaInicio.getTime() === c.inicio.getTime(),
+      ),
     })),
   );
 

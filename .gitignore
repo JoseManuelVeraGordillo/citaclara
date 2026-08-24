@@ -51,3 +51,7 @@ next-env.d.ts
 /playwright/.cache/
 
 /src/generated/prisma
+
+# correo simulado (feature 002-recordatorios-cita, FR-003): los .eml
+# generados no se versionan, el directorio si
+/datos/salida-correo/*.eml
