@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-24
 
-**Status**: Draft
+**Status**: Implementada
 
 **Input**: User description: "Portal del cliente. Los clientes del despacho quieren ver sus citas y cancelarlas sin llamar por teléfono (Jose, recepción de Nuria Lagar Abogados, dedica \"la mitad de la mañana\" a esto). Alcance: un cliente accede a una página personal moderna donde ve sus citas futuras y pasadas y puede cancelar una cita futura. Interfaz limpia y responsive, pensada para móvil. Preguntas que la spec debe dejar decididas (formuladas cerradas, para Jose): cómo accede el cliente sin crear cuentas ni contraseñas, hasta cuándo puede cancelar, y qué pasa con el hueco liberado. Datos: citar casos reales de la semilla en los ejemplos. Fuera de alcance v1: reservar o mover citas online, pagos."
 

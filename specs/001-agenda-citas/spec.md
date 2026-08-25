@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-21
 
-**Status**: Draft
+**Status**: Implementada
 
 **Input**: User description: "Núcleo de agenda de CitaClara. Contexto: despacho de abogados pequeño (2-5 profesionales); la secretaría gestiona la agenda; los clientes, de momento, solo existen como fichas. Alcance de la 001: entidades (despacho, profesionales, servicios, clientes, citas); regla de solape RN1 y regla de pasado RN2; interfaz de agenda del día para secretaría con alta, reprogramación y cambios de estado de citas; semilla determinista con Nuria Lagar Abogados, 3 profesionales, 4 servicios, ~40 clientes, 8 semanas de historia y 2 semanas futuras. Fuera de alcance: acceso del cliente, recordatorios, analítica, pagos online."
 

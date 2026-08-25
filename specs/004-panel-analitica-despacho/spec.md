@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-24
 
-**Status**: Draft
+**Status**: Implementada
 
 **Input**: User description: "Panel de analítica para el despacho. Jose lo necesita para las renovaciones: 'enseñar al despacho lo que CitaClara le ahorra'. Alcance: una página del panel (misma clave que la agenda), con interfaz moderna y gráficos claros: ocupación semanal por profesional, tasa de no asistencia por profesional, ingresos por servicio (citas completadas; importes exactos, al céntimo), y evolución de las últimas 8 semanas. Solo lectura: esta feature no escribe NADA. Construye los ejemplos de la spec con los números reales de la semilla (p. ej., la tasa de no asistencia real de cada profesional). Preguntas cerradas para Jose: ¿cómo se define exactamente 'tasa de no asistencia' y 'ocupación'?"
 
