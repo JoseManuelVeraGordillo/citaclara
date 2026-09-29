@@ -133,7 +133,7 @@ async function main() {
 
   const despacho = await prisma.despacho.create({
     data: {
-      nombre: 'Nuria Lagar Abogados',
+      nombre: 'Bufete Virtual Demo',
       claveSecretariaHash: hashSync(claveSecretaria, 10),
       clavePanelHash: hashSync('panel2026', 10),
     },
@@ -141,9 +141,9 @@ async function main() {
 
   const profesionales = await Promise.all(
     [
-      { nombre: 'Nuria Lagar', especialidad: 'abogada' },
-      { nombre: 'David Rayo', especialidad: 'abogado' },
-      { nombre: 'Jose Lagar', especialidad: 'administración' },
+      { nombre: 'Elena Martínez', especialidad: 'abogada' },
+      { nombre: 'Carlos Ruiz', especialidad: 'abogado' },
+      { nombre: 'Ana García', especialidad: 'administración' },
     ].map((p) => prisma.profesional.create({ data: { ...p, despachoId: despacho.id } })),
   );
 
